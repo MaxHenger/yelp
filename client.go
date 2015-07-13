@@ -1,65 +1,66 @@
+/*
+This package provides an interface to the functionality the Yelp 2.0 API offers.
+Its use is entirely facilitated by instantiating a Client type through the
+New(...) function. Here one has to specify consecutively:
+1) The Yelp API URL (at the moment of writing this is http://api.yelp.com/v2/search
+2) The consumer key
+3) The consumer key secret
+4) The token
+5) The token secret
+The last four values are provided by Yelp by creating an account.
+
+After the Client is created, one can perform queries in two manners:
+
+	1) Using the Query structure
+Creating an instance of the Query structure. After which consecutive
+calls to the Append(name, value) function will add a new query element.
+Each consists of a element name and a corresponding value. These values
+must follow the rules provided by the Yelp API documentation.
+
+The advantage of this method is that the queries are all performed
+slightly faster. However, these are more error-prone and, in the case
+that Yelp decides to change their API, harder to maintain.
+
+Once the Query type is fully initialized, one can call the
+Client.SearchQuery(...) function to retrieve the businesses
+
+	2) Using the SearchOptions(...) function with SearchQuerier implementations
+Calling Client.SearchOptions(...) with the dedicated option types, all
+implementing a SearchQuerier interface. The currently available search
+options are:
+- SearchLocation
+- SearchCoordinates
+- SearchLocationCoordinates
+- SearchBounds
+- SearchTerms
+- SearchLimit
+- SearchOffset
+- SearchSort
+- SearchCategory
+- SearchRadius
+- SearchDeals
+
+This method if searching is slightly slower, but the resulting code is
+more easily maintainable and will check for the possibility of multiple
+defined search options.
+
+The query will still have to be checked for possible errors. In case the error
+originated from within the Yelp API this error can be displayed.
+*/
 package yelp
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"strings"
-	"math/rand"
 	"time"
 )
 
 func init() {
 	rand.Seed(time.Now().Unix())
-}
-
-//The Coordinates structure represents latitude and longitude coordinates and has
-//JSON tags such that it can be read from the returned yelp data
-type Coordinates struct {
-	Latitude  float64 `json:"latitude" json:"latitude_delta"`
-	Longitude float64 `json:"longitude" json:"longitude_delta"`
-}
-
-//The BusinessLocation represents the location of a yelp business. It is embedded
-//within the Business structure.
-type BusinessLocation struct {
-	Address        []string    `json:"address"`
-	City           string      `json:"city"`
-	Position       Coordinates `json:"coordinate"`
-	CountryCode    string      `json:"country_code"`
-	DisplayAddress []string    `json:"display_address"`
-	PostalCode     string      `json:"postal_code"`
-	StateCode      string      `json:"state_code"`
-}
-
-//The Business structure is the complete description of a business as provided
-//by yelp.
-type Business struct {
-	DisplayPhone string           `json:"display_phone"`
-	Distance     float64          `json:"distance"`
-	IsClosed     bool             `json:"is_closed"`
-	Location     *BusinessLocation `json:"location"`
-	Name         string           `json:"name"`
-	Phone        string           `json:"phone"`
-	Rating       float64          `json:"rating"`
-}
-
-//The BusinessRegion structure specifies the center of the region which is
-//considered in the query and the distance (span) it is from the provided
-//coordinates
-type BusinessRegion struct {
-	Center Coordinates `json:"center"`
-	Span   Coordinates `json:"span"`
-}
-
-//The Businesses structure acts as a container for the JSON data that yelp
-//returns upon a successfull Yelp API call. This is the structure in which the
-//result will be unmarshalled.
-type Businesses struct {
-	Businesses []*Business     `json:"businesses"`
-	Region     *BusinessRegion `json:"region"`
-	Total      int            `json:"total"`
 }
 
 //The responseError struct is used when the data request was not successfully
@@ -81,11 +82,13 @@ type responseErrorContainer struct {
 //functionality can be accessed. The structure can be best created through the
 //provided New(...) method. Once created, queries to Yelp can be performed in
 //two ways:
-// 1. Through SearchQuery(...), specifying the query elements manually with the
-//		chance of getting them wrong.
-// 2. Through SearchOptions(...), specifying the various query elements through
-//		components implementing the SearchQuerier interface. This will be
-//		computationally more intensive but safer.
+//
+//1. Through SearchQuery(...), specifying the query elements manually with the
+//chance of getting them wrong.
+//
+//2. Through SearchOptions(...), specifying the various query elements through
+//components implementing the SearchQuerier interface. This will be
+//computationally more intensive but safer.
 type Client struct {
 	url    string
 	signer oauth

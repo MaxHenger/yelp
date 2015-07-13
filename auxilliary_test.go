@@ -27,7 +27,7 @@ func TestPercentEncode(t *testing.T) {
 		"abc%28abc%29abc",
 		"abc-abc_abc",
 		"abc%3Dabc%2Babc"}
-		
+
 	if len(toAttempt) != len(expected) {
 		t.Errorf("Invalid test data supplied: %d attempts unequal to %d expected results", len(toAttempt), len(expected))
 	}
