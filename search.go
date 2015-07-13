@@ -117,7 +117,7 @@ type SearchQuerier interface {
 	Query(*SearchQuery) error
 }
 
-//SearchCoordinates is a search option specifying a location in terms of 
+//SearchCoordinates is a search option specifying a location in terms of
 //latitude and longitude coordinates
 type SearchCoordinates struct {
 	Latitude  float64
@@ -201,7 +201,7 @@ func (slc SearchLocationCoordinates) Query(sq *SearchQuery) error {
 	return nil
 }
 
-//SearchBounds is a search option specifying a location range in terms of a 
+//SearchBounds is a search option specifying a location range in terms of a
 //bounding box created by two pairs of longitude and latitude coordinates
 type SearchBounds struct {
 	SWLatitude  float64
@@ -340,7 +340,7 @@ func (ss SearchSort) Query(sq *SearchQuery) error {
 }
 
 //SearchCategory is a typedefinition to be used in combination with the following
-//go-style enumeration. It is used in the SearchCategories search option to 
+//go-style enumeration. It is used in the SearchCategories search option to
 //specify multiple type-safe categories
 type SearchCategory int
 
@@ -422,7 +422,7 @@ func (sr SearchRadius) Query(sq *SearchQuery) error {
 	return nil
 }
 
-//SearchDeals is a boolean search option whether Yelp should only return 
+//SearchDeals is a boolean search option whether Yelp should only return
 //businesses with deals.
 type SearchDeals bool
 
