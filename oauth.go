@@ -33,7 +33,7 @@ func (yoa *oauth) SetHashKey(consumerSecret string, tokenSecret string) {
 //Sign will use the hash key and a HMAC-SHA1 algorithm to generate and sign a
 //signature. This signature, together with all other important oauth search query
 //elements, will be added to the SearchQuery.
-func (yoa *oauth) Sign(method string, url string, elements *SearchQuery) {
+func (yoa *oauth) Sign(method string, url string, elements *SearchQuery) error {
 	//add the OAuth elements to the Yelp query
 	elements.Append("oauth_consumer_key", yoa.ConsumerKey)
 	elements.Append("oauth_nonce", nonce(30))
@@ -50,8 +50,20 @@ func (yoa *oauth) Sign(method string, url string, elements *SearchQuery) {
 	//reset the hasher (could have been used before), then sign the signature
 	//yoa.Hasher.Reset()
 	hasher := hmac.New(sha1.New, yoa.hashKey)
-	hasher.Write([]byte(signature))
+	totalWritten := 0
+	curWritten := 0
+	var err error = nil
+
+	for totalWritten < len(signature) && err == nil {
+		curWritten, err = hasher.Write([]byte(signature[totalWritten:]))
+		totalWritten += curWritten
+	}
+
+	if err != nil {
+		return Error{ErrorTypeWriteFailure, "oauth", "Hashing signature failed"}
+	}
 
 	//add the signature to the query and percent encode it
 	elements.Append("oauth_signature", percentEncode(base64.StdEncoding.EncodeToString(hasher.Sum(nil))))
+	return nil
 }

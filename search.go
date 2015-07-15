@@ -127,12 +127,13 @@ type SearchCoordinates struct {
 func (sl SearchCoordinates) Query(sq *SearchQuery) error {
 	//make sure the variable has not been set already
 	if sq.mask&searchBitMaskLocation != 0 {
-		return Error{"SearchCoordinates", "Attempting to set location for a second time"}
+		return Error{ErrorTypeInvalidArgumentRepetition, "SearchCoordinates", "Attempting to set location for a second time"}
 	}
 
 	//check if the latitude and longitude have correct values
 	if validLatitudeLongitude(sl.Latitude, sl.Longitude) == false {
-		return Error{"SearchCoordinates", fmt.Sprintf("Invalid latitude and/or longitude: %f, %f", sl.Latitude, sl.Longitude)}
+		return Error{ErrorTypeInvalidArgumentDefinition, "SearchCoordinates",
+			fmt.Sprintf("Invalid latitude and/or longitude: %f, %f", sl.Latitude, sl.Longitude)}
 	}
 
 	//add to the query
@@ -153,7 +154,7 @@ type SearchLocation string
 func (sl SearchLocation) Query(sq *SearchQuery) error {
 	//make sure the location has not been set already
 	if sq.mask&searchBitMaskLocation != 0 {
-		return Error{"SearchLocation", "Attempting to set location for a second time"}
+		return Error{ErrorTypeInvalidArgumentRepetition, "SearchLocation", "Attempting to set location for a second time"}
 	}
 
 	//ensure there are no spaces in the location name and add the result to the query
@@ -177,7 +178,7 @@ type SearchLocationCoordinates struct {
 func (slc SearchLocationCoordinates) Query(sq *SearchQuery) error {
 	//make sure the location has not been set already
 	if sq.mask&searchBitMaskLocation != 0 {
-		return Error{"SearchLocationCoordinates", "Attempting to set location for a second time"}
+		return Error{ErrorTypeInvalidArgumentRepetition, "SearchLocationCoordinates", "Attempting to set location for a second time"}
 	}
 
 	//ensure there are no spaces in the location name
@@ -185,7 +186,8 @@ func (slc SearchLocationCoordinates) Query(sq *SearchQuery) error {
 
 	//ensure the provided latitude and longitude are correct
 	if validLatitudeLongitude(slc.Latitude, slc.Longitude) == false {
-		return Error{"SearchLocationCoordinates", fmt.Sprintf("Invalid latitude and/or longitude: %f, $f", slc.Latitude, slc.Longitude)}
+		return Error{ErrorTypeInvalidArgumentDefinition, "SearchLocationCoordinates",
+			fmt.Sprintf("Invalid latitude and/or longitude: %f, $f", slc.Latitude, slc.Longitude)}
 	}
 
 	//convert float latitude and longitude to string
@@ -213,16 +215,18 @@ type SearchBounds struct {
 func (sb SearchBounds) Query(sq *SearchQuery) error {
 	//make sure the location has not been set already
 	if sq.mask&searchBitMaskLocation != 0 {
-		return Error{"SearchBounds", "Attempting to set location for a second time"}
+		return Error{ErrorTypeInvalidArgumentRepetition, "SearchBounds", "Attempting to set location for a second time"}
 	}
 
 	//check the validity of the arguments
 	if validLatitudeLongitude(sb.SWLatitude, sb.SWLongitude) == false {
-		return Error{"SearchBounds", fmt.Sprintf("Invalid southwest latitude and/or longitude: %f, %f", sb.SWLatitude, sb.SWLongitude)}
+		return Error{ErrorTypeInvalidArgumentDefinition, "SearchBounds",
+			fmt.Sprintf("Invalid southwest latitude and/or longitude: %f, %f", sb.SWLatitude, sb.SWLongitude)}
 	}
 
 	if validLatitudeLongitude(sb.NELatitude, sb.NELongitude) == false {
-		return Error{"SearchBounds", fmt.Sprintf("Invalid northeast latitude and/or longitude: %f, %f", sb.NELatitude, sb.NELongitude)}
+		return Error{ErrorTypeInvalidArgumentDefinition, "SearchBounds",
+			fmt.Sprintf("Invalid northeast latitude and/or longitude: %f, %f", sb.NELatitude, sb.NELongitude)}
 	}
 
 	//convert float latitudes and longitudes to the required format
@@ -250,7 +254,7 @@ type SearchTerms []string
 func (st SearchTerms) Query(sq *SearchQuery) error {
 	//make sure the search terms havent already been set
 	if sq.mask&searchBitMaskTerm != 0 {
-		return Error{"SearchTerms", "Attempting to set search terms a second time"}
+		return Error{ErrorTypeInvalidArgumentRepetition, "SearchTerms", "Attempting to set search terms a second time"}
 	}
 
 	//replace all terms with a space by a plus-sign
@@ -273,12 +277,12 @@ type SearchLimit int
 func (sl SearchLimit) Query(sq *SearchQuery) error {
 	//make sure the search limit has not already been set
 	if sq.mask&searchBitMaskLimit != 0 {
-		return Error{"SearchLimit", "Attempting to set search limit a second time"}
+		return Error{ErrorTypeInvalidArgumentRepetition, "SearchLimit", "Attempting to set search limit a second time"}
 	}
 
 	//make sure the limit is valid
 	if sl < 0 || sl > 20 {
-		return Error{"SearchLimit", fmt.Sprintf("Invalid search limit: %d", int(sl))}
+		return Error{ErrorTypeInvalidArgumentDefinition, "SearchLimit", fmt.Sprintf("Invalid search limit: %d", int(sl))}
 	}
 
 	//Set the query and mask, and return
@@ -296,12 +300,12 @@ type SearchOffset int
 func (so SearchOffset) Query(sq *SearchQuery) error {
 	//make sure the search offset hasn't already been set
 	if sq.mask&searchBitMaskOffset != 0 {
-		return Error{"SearchOffset", "Attempting to set search offset a second time"}
+		return Error{ErrorTypeInvalidArgumentRepetition, "SearchOffset", "Attempting to set search offset a second time"}
 	}
 
 	//make sure the offset is valid
 	if so < 0 {
-		return Error{"SearchOffset", fmt.Sprintf("Invalid search offsets: %d", int(so))}
+		return Error{ErrorTypeInvalidArgumentDefinition, "SearchOffset", fmt.Sprintf("Invalid search offsets: %d", int(so))}
 	}
 
 	//set the query and mask, and return
@@ -324,12 +328,12 @@ const (
 func (ss SearchSort) Query(sq *SearchQuery) error {
 	//make sure the sorting method hasn't already been set
 	if sq.mask&searchBitMaskSort != 0 {
-		return Error{"SearchSort", "Attempting to set sorting method a second time"}
+		return Error{ErrorTypeInvalidArgumentRepetition, "SearchSort", "Attempting to set sorting method a second time"}
 	}
 
 	//make sure the sorting method is valid
 	if ss < SearchSortBestMatched || ss > SearchSortHighestRated {
-		return Error{"SearchSort", fmt.Sprintf("Invalid sorting method: %v", ss)}
+		return Error{ErrorTypeInvalidArgumentDefinition, "SearchSort", fmt.Sprintf("Invalid sorting method: %v", ss)}
 	}
 
 	//set the sorting method, update the mask and return
@@ -368,7 +372,7 @@ type SearchCategories []SearchCategory
 func (sc SearchCategories) Query(sq *SearchQuery) error {
 	//check if the categories aren't already set
 	if sq.mask&searchBitMaskCategory != 0 {
-		return Error{"SearchCategories", "Attempting to set the category filter a second time"}
+		return Error{ErrorTypeInvalidArgumentRepetition, "SearchCategories", "Attempting to set the category filter a second time"}
 	}
 
 	//append all search categories in a single string, it should be comma-seperated
@@ -376,7 +380,7 @@ func (sc SearchCategories) Query(sq *SearchQuery) error {
 
 	if length == 0 {
 		//no search categories specified
-		return Error{"SearchCategories", "No search categories are specified"}
+		return Error{ErrorTypeInvalidArgumentDefinition, "SearchCategories", "No search categories are specified"}
 	}
 
 	var buffer bytes.Buffer
@@ -387,7 +391,7 @@ func (sc SearchCategories) Query(sq *SearchQuery) error {
 
 		if v < SearchCategoryActive || v >= SearchCategoryTotal {
 			//invalid category specified
-			return Error{"SearchCategory", "Invalid search category specified"}
+			return Error{ErrorTypeInvalidArgumentDefinition, "SearchCategory", "Invalid search category specified"}
 		}
 
 		buffer.WriteString(searchCategoryNames[v])
@@ -407,12 +411,12 @@ type SearchRadius int
 func (sr SearchRadius) Query(sq *SearchQuery) error {
 	//make sure the radius isnt already set
 	if sq.mask&searchBitMaskRadius != 0 {
-		return Error{"SearchRadius", "Attempting to set the radius filter a second time"}
+		return Error{ErrorTypeInvalidArgumentRepetition, "SearchRadius", "Attempting to set the radius filter a second time"}
 	}
 
 	//make sure the specified value is valid
 	if sr < 0 || sr > 40000 {
-		return Error{"SearchRadius", fmt.Sprintf("Invalid radius specified: %d", int(sr))}
+		return Error{ErrorTypeInvalidArgumentDefinition, "SearchRadius", fmt.Sprintf("Invalid radius specified: %d", int(sr))}
 	}
 
 	//write query, update mask and return
@@ -429,7 +433,7 @@ type SearchDeals bool
 func (sd SearchDeals) Query(sq *SearchQuery) error {
 	//make sure the deals option isn't already set
 	if sq.mask&searchBitMaskDeals != 0 {
-		return Error{"SearchDeals", "Attempting to set the deals search option a second time"}
+		return Error{ErrorTypeInvalidArgumentRepetition, "SearchDeals", "Attempting to set the deals search option a second time"}
 	}
 
 	//add query, update mask and return

@@ -131,7 +131,7 @@ func (c Client) validateResponse(response []byte) (businesses *Businesses, err e
 
 			if !found {
 				//did not find a second bracket
-				return nil, Error{"Client", "Could not find a matching closing '\"' bracket while searching for the first JSON entry"}
+				return nil, Error{ErrorTypeInvalidYelpResponse, "Client", "Could not find a matching closing '\"' bracket while searching for the first JSON entry"}
 			}
 
 			break
@@ -140,7 +140,7 @@ func (c Client) validateResponse(response []byte) (businesses *Businesses, err e
 
 	if !found {
 		//did not find an opening bracket
-		return nil, Error{"Client", "Could not find an opening '\"' bracket while search for the first JSON entry"}
+		return nil, Error{ErrorTypeInvalidYelpResponse, "Client", "Could not find an opening '\"' bracket while search for the first JSON entry"}
 	}
 
 	//check if the returned data contained an error
@@ -151,11 +151,11 @@ func (c Client) validateResponse(response []byte) (businesses *Businesses, err e
 
 		if e != nil {
 			//Unmarshaling into the error structure also yielded problems
-			return nil, ErrorEmbedded{"Client", "Error retrieved from Yelp, could not unmarshal it", e}
+			return nil, Error{ErrorTypeInvalidYelpResponse, "Client", "Error retrieved from Yelp, could not unmarshal it"}
 		}
 
 		//Return error information
-		return nil, Error{"Client", fmt.Sprintf("Retrieved error from Yelp:\n\tText:%v\n\tID:%v\n\tDescription:%v",
+		return nil, Error{ErrorTypeInvalidYelpResponse, "Client", fmt.Sprintf("Retrieved error from Yelp:\n\tText:%v\n\tID:%v\n\tDescription:%v",
 			yelpError.Error.Text, yelpError.Error.ID, yelpError.Error.Description)}
 	}
 
@@ -178,32 +178,29 @@ func (c Client) SearchQuery(q SearchQuery) (*Businesses, error) {
 	qp := &q
 
 	//sign the current query
-	c.signer.Sign("GET", c.url, qp)
+	err := c.signer.Sign("GET", c.url, qp)
+
+	if err != nil {
+		return nil, Error{ErrorTypeOAuthFailure, "Client", "Failed to sign request"}
+	}
 
 	//create the URL from which to request data
 	data, err := http.Get(strings.Join([]string{c.url, qp.String()}, "?"))
 	defer data.Body.Close()
 
 	if err != nil {
-		return nil, ErrorEmbedded{"Client", "Failed to perform HTTP request", err}
+		return nil, Error{ErrorTypeHTTPFailure, "Client", "Failed to perform HTTP request"}
 	}
 
 	//read the body of the html page
 	body, err := ioutil.ReadAll(data.Body)
 
 	if err != nil {
-		return nil, ErrorEmbedded{"Client", "Failed to read entire HTML body", err}
+		return nil, Error{ErrorTypeReadFailure, "Client", "Failed to read entire HTML body"}
 	}
 
-	//validate the response
-	businesses, err := c.validateResponse(body)
-
-	if err == nil {
-		//correctly retrieved
-		return businesses, nil
-	}
-
-	return nil, ErrorEmbedded{"Client", "The retrieved yelp data is invalid", err}
+	//validate the response and return businesses and possible error
+	return c.validateResponse(body)
 }
 
 //SearchOptions allows performing a search using the Yelp API by options
@@ -214,11 +211,11 @@ func (c Client) SearchOptions(options ...SearchQuerier) (*Businesses, error) {
 	var qp SearchQuery
 
 	for _, v := range options {
-		e := v.Query(&qp)
+		err := v.Query(&qp)
 
-		if e != nil {
+		if err != nil {
 			//an error ocurred while querying the option
-			return nil, ErrorEmbedded{"Client", "Failed to create query from options", e}
+			return nil, err
 		}
 	}
 
