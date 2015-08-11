@@ -53,15 +53,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"strings"
-	"time"
 )
-
-func init() {
-	rand.Seed(time.Now().Unix())
-}
 
 //The responseError struct is used when the data request was not successfully
 //handled by the Yelp API and an error is occurred in JSON format. This error

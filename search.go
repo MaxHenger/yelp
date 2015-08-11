@@ -12,17 +12,17 @@ import (
 //can be used in the Yelp API to specify what kind of businesses are requested
 //from the API
 const (
-	searchIdentifierTerm            = "term"
-	searchIdentifierLimit           = "limit"
-	searchIdentifierOffset          = "offset"
-	searchIdentifierSort            = "sort"
-	searchIdentifierCategory        = "category_filter"
-	searchIdentifierRadius          = "radius_filter"
-	searchIdentifierDeals           = "deals_filter"
-	searchIdentifierLocation        = "location"
-	searchIdentifierCoordinates     = "ll"
-	searchIdentifierCoordinatesHint = "cll"
-	searchIdentifierBounds          = "bounds"
+	searchTermKey            = "term"
+	searchLimitKey           = "limit"
+	searchOffsetKey          = "offset"
+	searchSortKey            = "sort"
+	searchCategoryKey        = "category_filter"
+	searchRadiusKey          = "radius_filter"
+	searchDealsKey           = "deals_filter"
+	searchLocationKey        = "location"
+	searchCoordinatesKey     = "ll"
+	searchCoordinatesHintKey = "cll"
+	searchBoundsKey          = "bounds"
 )
 
 //The Yelp query bitmask. This bitmask is used when asking the client to perform
@@ -112,7 +112,8 @@ func (q *SearchQuery) Append(name, value string) {
 }
 
 //The SearchQuerier interface provides a method for search options to translate
-//their option into a search query element.
+//their option into a search query element. The method to retrieve the query
+//accepts a pointer to a query which will be modified (c-style)
 type SearchQuerier interface {
 	Query(*SearchQuery) error
 }
@@ -141,7 +142,7 @@ func (sl SearchCoordinates) Query(sq *SearchQuery) error {
 	buffer.WriteString(strconv.FormatFloat(sl.Latitude, 'f', -1, 64))
 	buffer.WriteString(",")
 	buffer.WriteString(strconv.FormatFloat(sl.Longitude, 'f', -1, 64))
-	sq.Append(searchIdentifierCoordinates, buffer.String())
+	sq.Append(searchCoordinatesKey, buffer.String())
 
 	//modify the mask and return
 	sq.mask |= searchBitMaskLocation
@@ -158,7 +159,7 @@ func (sl SearchLocation) Query(sq *SearchQuery) error {
 	}
 
 	//ensure there are no spaces in the location name and add the result to the query
-	sq.Append(searchIdentifierLocation, strings.Replace(string(sl), " ", "+", -1))
+	sq.Append(searchLocationKey, strings.Replace(string(sl), " ", "+", -1))
 
 	//modify the mask and return
 	sq.mask |= searchBitMaskLocation
@@ -182,7 +183,7 @@ func (slc SearchLocationCoordinates) Query(sq *SearchQuery) error {
 	}
 
 	//ensure there are no spaces in the location name
-	sq.Append(searchIdentifierLocation, strings.Replace(slc.Location, " ", "+", -1))
+	sq.Append(searchLocationKey, strings.Replace(slc.Location, " ", "+", -1))
 
 	//ensure the provided latitude and longitude are correct
 	if validLatitudeLongitude(slc.Latitude, slc.Longitude) == false {
@@ -196,7 +197,7 @@ func (slc SearchLocationCoordinates) Query(sq *SearchQuery) error {
 	buffer.WriteString(",")
 	buffer.WriteString(strconv.FormatFloat(slc.Longitude, 'f', -1, 64))
 
-	sq.Append(searchIdentifierCoordinatesHint, buffer.String())
+	sq.Append(searchCoordinatesHintKey, buffer.String())
 
 	//modify the mask and return
 	sq.mask |= searchBitMaskLocation
@@ -240,7 +241,7 @@ func (sb SearchBounds) Query(sq *SearchQuery) error {
 	buffer.WriteString(strconv.FormatFloat(sb.NELongitude, 'f', -1, 64))
 
 	//add the query
-	sq.Append(searchIdentifierBounds, buffer.String())
+	sq.Append(searchBoundsKey, buffer.String())
 
 	//modify the mask and return
 	sq.mask |= searchBitMaskLocation
@@ -263,7 +264,7 @@ func (st SearchTerms) Query(sq *SearchQuery) error {
 	}
 
 	//set the terms by joining all terms with a comma
-	sq.Append(searchIdentifierTerm, strings.Join(st, ","))
+	sq.Append(searchTermKey, strings.Join(st, ","))
 
 	//set the mask and return
 	sq.mask |= searchBitMaskTerm
@@ -286,7 +287,7 @@ func (sl SearchLimit) Query(sq *SearchQuery) error {
 	}
 
 	//Set the query and mask, and return
-	sq.Append(searchIdentifierLimit, strconv.Itoa(int(sl)))
+	sq.Append(searchLimitKey, strconv.Itoa(int(sl)))
 
 	sq.mask |= searchBitMaskLimit
 	return nil
@@ -309,7 +310,7 @@ func (so SearchOffset) Query(sq *SearchQuery) error {
 	}
 
 	//set the query and mask, and return
-	sq.Append(searchIdentifierOffset, strconv.Itoa(int(so)))
+	sq.Append(searchOffsetKey, strconv.Itoa(int(so)))
 
 	sq.mask |= searchBitMaskOffset
 	return nil
@@ -337,7 +338,7 @@ func (ss SearchSort) Query(sq *SearchQuery) error {
 	}
 
 	//set the sorting method, update the mask and return
-	sq.Append(searchIdentifierSort, strconv.Itoa(int(ss)))
+	sq.Append(searchSortKey, strconv.Itoa(int(ss)))
 
 	sq.mask |= searchBitMaskSort
 	return nil
@@ -351,19 +352,41 @@ type SearchCategory int
 const (
 	//if needed more can be added, if so, don't forget to update the constant
 	//string array as well
-	SearchCategoryActive SearchCategory = iota
-	SearchCategoryArtsEntertainment
-	SearchCategoryAutomotive
-	SearchCategoryBeautySpas
-	SearchCategoryGolf
-	SearchCategoryNightlife
+	SearchCategoryNightlife SearchCategory = iota // Parent category
 	SearchCategoryBars
-	SearchCategoryRestaurants
-	SearchCategoryTotal
+	SearchCategoryGayBars
+	SearchCategoryDanceClubs
+	SearchCategoryDanceRestaurants
+	SearchCategoryJazzAndBlues
+	SearchCategoryKaraoke
+	SearchCategoryPianoBars
+	SearchCategoryRestaurants // Parent category
+	SearchCategoryCafes
+	SearchCategoryDiners
+	SearchCategoryNightfood
+	SearchCategoryPizza
+	SearchCategoryPubFood
+	SearchCategorySandwiches
+	SearchCategorySushi
+	SearchCategoryTotal // Keep this last always
 )
 
-var searchCategoryNames = [...]string{"active", "arts", "auto", "beautysvc",
-	"golf", "nightlife", "bars", "restaurants"}
+var searchCategoryNames = [...]string{
+	"nightlife",
+	"bars", "gaybars", "danceclubs", "dancerestaurants",
+	"jazzandblues", "karaoke", "pianobars",
+	"restaurants",
+	"cafes", "diners", "nightfood", "pizza",
+	"pubfood", "sandwiches", "sushi",
+}
+
+func (sc SearchCategory) Valid() bool {
+	return sc >= SearchCategoryNightlife && sc < SearchCategoryTotal
+}
+
+func (sc SearchCategory) String() string {
+	return searchCategoryNames[sc]
+}
 
 //SearchCategories is a search option to tell Yelp to only return businesses
 //belonging to a certain set of categories
@@ -384,21 +407,26 @@ func (sc SearchCategories) Query(sq *SearchQuery) error {
 	}
 
 	var buffer bytes.Buffer
-	for i, v := range sc {
-		if i != 0 {
-			buffer.WriteString(",")
+	if len(sc) != 0 {
+		if !sc[0].Valid() {
+			return Error{ErrorTypeInvalidArgumentDefinition, "SearchCategory", "Invalid search category specified"}
 		}
+		buffer.WriteString(sc[0].String())
+	}
 
-		if v < SearchCategoryActive || v >= SearchCategoryTotal {
+	for i := 1; i < len(sc); i++ {
+		buffer.WriteString(",")
+
+		if !sc[i].Valid() {
 			//invalid category specified
 			return Error{ErrorTypeInvalidArgumentDefinition, "SearchCategory", "Invalid search category specified"}
 		}
 
-		buffer.WriteString(searchCategoryNames[v])
+		buffer.WriteString(sc[i].String())
 	}
 
 	//write query, update mask and return
-	sq.Append(searchIdentifierCategory, buffer.String())
+	sq.Append(searchCategoryKey, buffer.String())
 
 	sq.mask |= searchBitMaskCategory
 	return nil
@@ -420,7 +448,7 @@ func (sr SearchRadius) Query(sq *SearchQuery) error {
 	}
 
 	//write query, update mask and return
-	sq.Append(searchIdentifierRadius, strconv.Itoa(int(sr)))
+	sq.Append(searchRadiusKey, strconv.Itoa(int(sr)))
 
 	sq.mask |= searchBitMaskRadius
 	return nil
@@ -438,9 +466,9 @@ func (sd SearchDeals) Query(sq *SearchQuery) error {
 
 	//add query, update mask and return
 	if sd == true {
-		sq.Append(searchIdentifierDeals, "true")
+		sq.Append(searchDealsKey, "true")
 	} else {
-		sq.Append(searchIdentifierDeals, "false")
+		sq.Append(searchDealsKey, "false")
 	}
 
 	sq.mask |= searchBitMaskDeals
